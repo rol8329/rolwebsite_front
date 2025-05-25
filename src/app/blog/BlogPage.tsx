@@ -1,23 +1,18 @@
-// src/app/blog/page.tsx (Final Responsive Version)
+// src/app/blog/page.tsx (Updated with NavigationMenu Component)
 "use client";
 
 import React, { useState, useEffect, CSSProperties } from 'react';
-import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { X, BarChart3, Filter } from 'lucide-react';
+import NavigationMenu from '@/components/navigation/NavigationMenu';
 import TextPostForm from '@/components/create/TextPostForm';
 import Left from '@/components/blogspot/Left';
 import Middle from '@/components/blogspot/Middle';
 import Right from '@/components/blogspot/Right';
+import LoginForm from '@/components/auth/LoginForm';
+import RegisterForm from '@/components/auth/RegisterForm';
+import ProfileForm from '@/components/auth/ProfileForm';
+import ChangePasswordForm from '@/components/auth/ChangePasswordForm';
 
-// Create a QueryClient instance
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      retry: 2,
-    },
-  },
-});
 
 // Enhanced Modal component
 const Modal: React.FC<{
@@ -25,7 +20,8 @@ const Modal: React.FC<{
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-}> = ({ isOpen, onClose, title, children }) => {
+  maxWidth?: string;
+}> = ({ isOpen, onClose, title, children, maxWidth = '700px' }) => {
   
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -49,7 +45,13 @@ const Modal: React.FC<{
 
   return (
     <div style={styles.modalBackdrop} onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+      <div 
+        style={{
+          ...styles.modalContent,
+          maxWidth
+        }} 
+        onClick={(e) => e.stopPropagation()}
+      >
         <div style={styles.modalHeader}>
           <h2 style={styles.modalTitle}>{title}</h2>
           <button style={styles.closeButton} onClick={onClose} aria-label="Close modal">
@@ -73,6 +75,7 @@ interface FilterOptions {
 
 const BlogPageContent: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<'createPost' | 'login' | 'register' | 'profile' | 'settings' | 'changePassword'>('createPost');
   const [messages, setMessages] = useState({ success: '', error: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterOptions>({
@@ -102,7 +105,11 @@ const BlogPageContent: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const handleOpenModal = () => setIsModalOpen(true);
+  const handleOpenModal = (type: typeof modalType = 'createPost') => {
+    setModalType(type);
+    setIsModalOpen(true);
+  };
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setMessages({ success: '', error: '' });
@@ -121,8 +128,97 @@ const BlogPageContent: React.FC = () => {
   const handleSearch = (query: string) => setSearchQuery(query);
   const handleFilterChange = (newFilters: FilterOptions) => setFilters(newFilters);
 
+  const handleAuthAction = (action: 'login' | 'register' | 'profile' | 'settings' | 'changePassword') => {
+    handleOpenModal(action);
+  };
+
+  const getModalTitle = () => {
+    switch (modalType) {
+      case 'createPost': return 'Create New Post';
+      case 'login': return 'Login to Your Account';
+      case 'register': return 'Create New Account';
+      case 'profile': return 'Edit Profile';
+      case 'settings': return 'Account Settings';
+      case 'changePassword': return 'Change Password';
+      default: return 'Modal';
+    }
+  };
+
+  const renderModalContent = () => {
+    switch (modalType) {
+      case 'createPost':
+        return <TextPostForm setMessages={handleSetMessages} />;
+      case 'login':
+        return (
+          <LoginForm
+            onSuccess={() => {
+              handleSetMessages('Login successful!', '');
+              setTimeout(() => handleCloseModal(), 1500);
+            }}
+            onError={(error:string) => {
+              handleSetMessages('', error);
+            }}
+          />
+        );
+      case 'register':
+        return (
+          <RegisterForm
+            onSuccess={() => {
+              handleSetMessages('Registration successful! Welcome!', '');
+              setTimeout(() => handleCloseModal(), 1500);
+            }}
+            onError={(error:string) => {
+              handleSetMessages('', error);
+            }}
+          />
+        );
+      case 'profile':
+        return (
+          <ProfileForm
+            onSuccess={() => {
+              handleSetMessages('Profile updated successfully!', '');
+              setTimeout(() => handleCloseModal(), 1500);
+            }}
+            onError={(error:string) => {
+              handleSetMessages('', error);
+            }}
+          />
+        );
+      case 'settings':
+        return (
+          <div style={styles.authFormContainer}>
+            <p style={styles.authFormText}>Settings page coming soon!</p>
+            <button style={styles.authFormButton} onClick={handleCloseModal}>
+              Close
+            </button>
+          </div>
+        );
+      case 'changePassword':
+        return (
+          <ChangePasswordForm
+            onSuccess={() => {
+              handleSetMessages('Password changed successfully!', '');
+              setTimeout(() => handleCloseModal(), 1500);
+            }}
+            onError={(error:string) => {
+              handleSetMessages('', error);
+            }}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div style={styles.pageContainer}>
+      {/* Navigation Menu */}
+      <NavigationMenu 
+        isMobile={isMobile} 
+        currentPage="blog"
+        onAuthAction={handleAuthAction}
+      />
+
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.headerContent}>
@@ -170,7 +266,7 @@ const BlogPageContent: React.FC = () => {
               </div>
             )}
             <Left 
-              onCreatePost={handleOpenModal}
+              onCreatePost={() => handleOpenModal('createPost')}
               onSearch={handleSearch}
               onFilterChange={handleFilterChange}
             />
@@ -182,7 +278,7 @@ const BlogPageContent: React.FC = () => {
           <Middle 
             searchQuery={searchQuery}
             filters={filters}
-            onCreatePost={handleOpenModal}
+            onCreatePost={() => handleOpenModal('createPost')}
           />
         </div>
 
@@ -209,20 +305,21 @@ const BlogPageContent: React.FC = () => {
       <Modal 
         isOpen={isModalOpen} 
         onClose={handleCloseModal}
-        title="Create New Post"
+        title={getModalTitle()}
+        maxWidth={modalType === 'createPost' ? '700px' : '500px'}
       >
-        <TextPostForm setMessages={handleSetMessages} />
+        {renderModalContent()}
       </Modal>
 
       {/* Global Messages */}
       {messages.success && (
         <div style={styles.globalSuccessMessage}>
-          <p style={styles.messageText}>✅ {messages.success}</p>
+          <p style={styles.successMessageText}>✅ {messages.success}</p>
         </div>
       )}
       {messages.error && (
         <div style={styles.globalErrorMessage}>
-          <p style={styles.messageText}>❌ {messages.error}</p>
+          <p style={styles.errorMessageText}>❌ {messages.error}</p>
         </div>
       )}
 
@@ -242,11 +339,7 @@ const BlogPageContent: React.FC = () => {
 
 // Main Blog Page Component
 const BlogPage: React.FC = () => {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <BlogPageContent />
-    </QueryClientProvider>
-  );
+  return <BlogPageContent />;
 };
 
 // Comprehensive styles for responsive design
@@ -262,7 +355,7 @@ const styles: Record<string, CSSProperties> = {
     borderBottom: '1px solid #e2e8f0',
     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
     position: 'sticky',
-    top: 0,
+    top: '64px', // Account for navigation menu height
     zIndex: 100,
   },
   headerContent: {
@@ -318,13 +411,13 @@ const styles: Record<string, CSSProperties> = {
     padding: '24px',
     maxWidth: '1800px',
     margin: '0 auto',
-    minHeight: 'calc(100vh - 100px)',
+    minHeight: 'calc(100vh - 164px)', // Account for navigation + header
   },
   mobileContent: {
     display: 'flex',
     flexDirection: 'column',
     padding: '16px',
-    minHeight: 'calc(100vh - 80px)',
+    minHeight: 'calc(100vh - 144px)', // Account for navigation + header
     position: 'relative',
   },
   
@@ -332,7 +425,7 @@ const styles: Record<string, CSSProperties> = {
   leftColumn: {
     height: 'fit-content',
     position: 'sticky',
-    top: '120px',
+    top: '184px', // Navigation + header height
   },
   middleColumn: {
     minWidth: 0,
@@ -341,17 +434,17 @@ const styles: Record<string, CSSProperties> = {
   rightColumn: {
     height: 'fit-content',
     position: 'sticky',
-    top: '120px',
+    top: '184px', // Navigation + header height
   },
   
   // Mobile Panel Styles
   mobilePanel: {
     position: 'fixed',
-    top: '0',
+    top: '64px', // Below navigation
     left: '0',
     width: '85%',
     maxWidth: '350px',
-    height: '100vh',
+    height: 'calc(100vh - 64px)',
     backgroundColor: 'white',
     boxShadow: '4px 0 6px rgba(0, 0, 0, 0.1)',
     zIndex: 200,
@@ -385,7 +478,7 @@ const styles: Record<string, CSSProperties> = {
   },
   mobileBackdrop: {
     position: 'fixed',
-    top: 0,
+    top: '64px', // Below navigation
     left: 0,
     right: 0,
     bottom: 0,
@@ -451,6 +544,32 @@ const styles: Record<string, CSSProperties> = {
     flex: 1,
   },
   
+  // Auth Form Styles (Enhanced)
+  authFormContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '20px',
+    padding: '40px 20px',
+    textAlign: 'center',
+  },
+  authFormText: {
+    fontSize: '16px',
+    color: '#6b7280',
+    margin: 0,
+  },
+  authFormButton: {
+    padding: '12px 24px',
+    backgroundColor: '#3b82f6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+  },
+  
   // Global Message Styles
   globalSuccessMessage: {
     position: 'fixed',
@@ -480,7 +599,18 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
     fontSize: '14px',
     fontWeight: '600',
+  },
+  successMessageText: {
+    margin: 0,
+    fontSize: '14px',
+    fontWeight: '600',
     color: '#065f46',
+  },
+  errorMessageText: {
+    margin: 0,
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#dc2626',
   },
 };
 

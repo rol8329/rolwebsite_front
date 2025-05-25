@@ -2,6 +2,7 @@
 
 import { ReactQueryProvider } from "@/services/providers/query-provider";
 
+
 export default function RootLayout({
   children,
 }: {

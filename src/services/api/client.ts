@@ -1,3 +1,4 @@
+// src/services/api/client.ts - FIXED VERSION
 import axios, { type AxiosInstance, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 import type { APIResponse, LoginCredentials, Nullable } from '../../types/auth-types';
 import { storageService } from '../storage/storage';
@@ -9,9 +10,22 @@ let refreshToken: Nullable<string> = null;
 let tokenFetchPromise: Nullable<Promise<string | null>> = null;
 let isInitialized = false;
 
+// Public endpoints that should NEVER send auth tokens
+const PUBLIC_ENDPOINTS = [
+  '/api/blog/posts/',  // Your blog posts endpoint
+  '/api/account/auth/login/',
+  '/api/account/auth/register/',
+  '/api/account/auth/refresh/',
+  '/api/account/auth/logout/',
+];
+
+// Check if endpoint is public
+const isPublicEndpoint = (url: string): boolean => {
+  return PUBLIC_ENDPOINTS.some(endpoint => url.includes(endpoint));
+};
+
 // Initialize tokens from local storage - safely
 const initializeTokens = async (): Promise<void> => {
-  // Skip if already initialized or in server environment
   if (isInitialized || typeof window === 'undefined') {
     return;
   }
@@ -20,21 +34,22 @@ const initializeTokens = async (): Promise<void> => {
     accessToken = await storageService.getItem('accessToken');
     refreshToken = await storageService.getItem('refreshToken');
     isInitialized = true;
+    console.log('🔑 Tokens initialized:', {
+      hasAccess: !!accessToken,
+      hasRefresh: !!refreshToken
+    });
   } catch (error) {
     console.error('Error initializing tokens:', error);
   }
 };
 
-// Safe initialization call - won't run on server
+// Safe initialization call
 if (typeof window !== 'undefined') {
   initializeTokens();
 }
 
 // Function to get a new access token
-// In src/services/api/client.ts - modify the getAccessToken function
-
 export const getAccessToken = async (forceRefresh = false): Promise<string | null> => {
-  // Ensure tokens are initialized if we're client-side
   if (!isInitialized && typeof window !== 'undefined') {
     await initializeTokens();
   }
@@ -48,41 +63,38 @@ export const getAccessToken = async (forceRefresh = false): Promise<string | nul
     return tokenFetchPromise;
   }
 
-  // Fix: Correctly type the promise
   tokenFetchPromise = (async (): Promise<string | null> => {
     try {
-      // Don't throw an error if no refresh token - just return null
       if (!refreshToken) {
-        console.log('No refresh token available - user likely not logged in yet');
-        return null; // Return null instead of throwing
+        console.log('No refresh token available');
+        return null;
       }
 
-      console.log('Refreshing access token');
-      const response: AxiosResponse<APIResponse> = await axios.post(`${API_URL}/acount-api/token/refresh/`, {
+      console.log('🔄 Refreshing access token');
+      const response: AxiosResponse<APIResponse> = await axios.post(`${API_URL}/api/account/auth/refresh/`, {
         refresh: refreshToken,
       });
 
       accessToken = response.data.access;
       
-      // Only try to store if we're client-side
       if (typeof window !== 'undefined') {
         await storageService.setItem('accessToken', accessToken);
       }
 
+      console.log('✅ Token refreshed successfully');
       return accessToken;
     } catch (error) {
-      console.error('Failed to refresh access token:', error);
+      console.error('❌ Failed to refresh access token:', error);
       accessToken = null;
       refreshToken = null;
       
-      // Only try to remove storage if we're client-side
       if (typeof window !== 'undefined') {
         await Promise.all([
           storageService.removeItem('accessToken'),
           storageService.removeItem('refreshToken'),
         ]);
       }
-      return null; // Return null instead of throwing
+      return null;
     } finally {
       tokenFetchPromise = null;
     }
@@ -92,14 +104,13 @@ export const getAccessToken = async (forceRefresh = false): Promise<string | nul
 };
 
 // Function to login and retrieve tokens
-export const login = async (credentials: LoginCredentials): Promise<void> => {
+export const login = async (credentials: LoginCredentials): Promise<APIResponse> => {
   try {
-    const response: AxiosResponse<APIResponse> = await axios.post(`${API_URL}/acount-api/token/`, credentials);
+    const response: AxiosResponse<APIResponse> = await axios.post(`${API_URL}/api/account/auth/login/`, credentials);
 
     accessToken = response.data.access;
     refreshToken = response.data.refresh;
 
-    // Store tokens only client-side
     if (typeof window !== 'undefined') {
       await Promise.all([
         storageService.setItem('accessToken', accessToken),
@@ -107,30 +118,66 @@ export const login = async (credentials: LoginCredentials): Promise<void> => {
       ]);
     }
 
-    console.log('Login successful');
+    console.log('✅ Login successful');
+    return response.data;
   } catch (error) {
-    console.error('Login failed:', error);
+    console.error('❌ Login failed:', error);
     throw error;
   }
 };
 
 // Function to logout and clear tokens
 export const logout = async (): Promise<void> => {
+  if (refreshToken && typeof window !== 'undefined') {
+    try {
+      await axios.post(`${API_URL}/api/account/auth/logout/`, {
+        refresh: refreshToken
+      });
+    } catch (error) {
+      console.error('Server logout failed:', error);
+    }
+  }
+
   accessToken = null;
   refreshToken = null;
   
-  // Remove from storage only client-side
   if (typeof window !== 'undefined') {
     await Promise.all([
       storageService.removeItem('accessToken'),
       storageService.removeItem('refreshToken'),
     ]);
   }
-  console.log('Logged out');
+  console.log('🚪 Logged out');
 };
 
-// Create and initialize axios instance
-const createAxiosInstance = (): AxiosInstance => {
+// Function to set tokens
+export const setTokens = async (access: string, refresh: string): Promise<void> => {
+  accessToken = access;
+  refreshToken = refresh;
+
+  if (typeof window !== 'undefined') {
+    await Promise.all([
+      storageService.setItem('accessToken', access),
+      storageService.setItem('refreshToken', refresh),
+    ]);
+  }
+};
+
+// Function to clear tokens
+export const clearTokens = async (): Promise<void> => {
+  accessToken = null;
+  refreshToken = null;
+
+  if (typeof window !== 'undefined') {
+    await Promise.all([
+      storageService.removeItem('accessToken'),
+      storageService.removeItem('refreshToken'),
+    ]);
+  }
+};
+
+// Create authenticated axios instance
+const createAuthenticatedInstance = (): AxiosInstance => {
   const instance = axios.create({
     baseURL: API_URL,
     timeout: 10000,
@@ -140,38 +187,57 @@ const createAxiosInstance = (): AxiosInstance => {
     },
   });
 
-  // Request interceptor to attach access token
+  // Request interceptor - ONLY for authenticated requests
   instance.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
-    // Ensure tokens are initialized if we're client-side
+    // Skip auth for public endpoints
+    if (isPublicEndpoint(config.url || '')) {
+      console.log('🌐 Public endpoint - skipping auth:', config.url);
+      return config;
+    }
+
+    // Ensure tokens are initialized
     if (!isInitialized && typeof window !== 'undefined') {
       await initializeTokens();
     }
 
+    // Add token for authenticated endpoints
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
+      console.log('🔐 Added auth token to request:', config.url);
     } else if (typeof window !== 'undefined') {
-      // Only try to refresh token client-side
-      console.log('No access token found, attempting to refresh');
+      console.log('🔄 No access token, attempting refresh for:', config.url);
       try {
         const token = await getAccessToken(true);
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
+          console.log('✅ Added refreshed token to request');
+        } else {
+          console.log('❌ No token available for authenticated request');
         }
       } catch (error) {
-        console.error('Failed to get token for request:', error);
+        console.error('❌ Failed to get token for request:', error);
       }
     }
 
     return config;
   });
 
-  // Response interceptor to handle errors
+  // Response interceptor
   instance.interceptors.response.use(
-    (response: AxiosResponse) => response,
+    (response: AxiosResponse) => {
+      console.log('✅ Request successful:', response.config.url, response.status);
+      return response;
+    },
     async (error) => {
-      // Only handle auth errors client-side
-      if (typeof window !== 'undefined' && error.response?.status === 401 && refreshToken) {
-        console.log('Access token expired, attempting refresh');
+      console.error('❌ Request failed:', error.config?.url, error.response?.status);
+      
+      // Only handle auth errors client-side and for non-public endpoints
+      if (typeof window !== 'undefined' && 
+          error.response?.status === 401 && 
+          !isPublicEndpoint(error.config?.url || '') && 
+          refreshToken) {
+        
+        console.log('🔄 401 on authenticated endpoint, attempting refresh');
         try {
           const newToken = await getAccessToken(true);
           if (newToken) {
@@ -179,8 +245,8 @@ const createAxiosInstance = (): AxiosInstance => {
             return instance.request(error.config);
           }
         } catch (refreshError) {
-          console.error('Failed to refresh token:', refreshError);
-          await logout(); // Logout if refresh fails
+          console.error('❌ Token refresh failed:', refreshError);
+          await logout();
         }
       }
       return Promise.reject(error);
@@ -190,22 +256,40 @@ const createAxiosInstance = (): AxiosInstance => {
   return instance;
 };
 
-// Create proxy objects for axios instances that handle server/client differences
-// This approach maintains API compatibility with existing code
-function createApiProxy(): AxiosInstance {
-  const instance = createAxiosInstance();
-  
-  // For server-side rendering, return a basic instance
-  if (typeof window === 'undefined') {
-    return instance;
-  }
-  
-  // For client-side, ensure tokens are initialized
-  initializeTokens();
-  
-  return instance;
-}
+// Create public axios instance (never sends auth tokens)
+const createPublicInstance = (): AxiosInstance => {
+  const instance = axios.create({
+    baseURL: API_URL,
+    timeout: 10000,
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+  });
 
-// Export instances as they were before
-export const axiosAuthInstance = createApiProxy();
-export const axiosPublicInstance = createApiProxy();
+  // Simple logging interceptors
+  instance.interceptors.request.use((config) => {
+    console.log('🌐 Public request:', config.method?.toUpperCase(), config.url);
+    return config;
+  });
+
+  instance.interceptors.response.use(
+    (response) => {
+      console.log('✅ Public response:', response.status);
+      return response;
+    },
+    (error) => {
+      console.error('❌ Public request failed:', error.response?.status);
+      return Promise.reject(error);
+    }
+  );
+
+  return instance;
+};
+
+// Export different instances for different use cases
+export const axiosAuthInstance = createAuthenticatedInstance();
+export const axiosPublicInstance = createPublicInstance();
+
+// Default export is the smart instance that handles both
+export default axiosAuthInstance;

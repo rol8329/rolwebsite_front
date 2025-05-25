@@ -2,7 +2,7 @@
 
 const DJANGO_BASE_URL = 'http://127.0.0.1:8000';
 
-export const API_URL = `${DJANGO_BASE_URL}/blog-api`;
+export const API_URL = `${DJANGO_BASE_URL}`;
 export const TOKEN_REFRESH_THRESHOLD = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 // Base URL for media files

@@ -1,3 +1,4 @@
+// src/services/api/blogApi.ts
 import { axiosAuthInstance, axiosPublicInstance } from './client';
 import { API_URL } from '../../config/constants';
 import type { 
@@ -12,7 +13,8 @@ import type {
   BasePostGlobal
 } from '../../types/blog-types';
 
-const BASE_URL = `${API_URL}/posts`;
+// Fixed base URL to match new structure
+const BASE_URL = `${API_URL}/api/blog/posts`;
 
 export const blogApi = {
   /**
@@ -62,7 +64,7 @@ export const blogApi = {
   async createVideoPost(postUuid: string, data: CreateMediaPayload): Promise<VideoPost> {
     const formData = new FormData();
     formData.append('label', data.label);
-    formData.append('video', data.file); // Fixed: use 'video' not 'file'
+    formData.append('video', data.file);
 
     const response = await axiosAuthInstance.post(`${BASE_URL}/${postUuid}/videos/`, formData, {
       headers: {
@@ -74,17 +76,18 @@ export const blogApi = {
   },
 
   async getVideoPost(uuid: string): Promise<VideoPost> {
-    const response = await axiosPublicInstance.get(`${BASE_URL}/videos/${uuid}/`);
+    // Fixed URL structure
+    const response = await axiosPublicInstance.get(`${API_URL}/api/blog/videos/${uuid}/`);
     return response.data;
   },
 
   async updateVideoPost(uuid: string, data: Partial<VideoPost>): Promise<VideoPost> {
-    const response = await axiosAuthInstance.put(`${BASE_URL}/videos/${uuid}/`, data);
+    const response = await axiosAuthInstance.put(`${API_URL}/api/blog/videos/${uuid}/`, data);
     return response.data;
   },
 
   async deleteVideoPost(uuid: string): Promise<void> {
-    await axiosAuthInstance.delete(`${BASE_URL}/videos/${uuid}/`);
+    await axiosAuthInstance.delete(`${API_URL}/api/blog/videos/${uuid}/`);
   },
 
   // AudioPost Endpoints
@@ -96,7 +99,7 @@ export const blogApi = {
   async createAudioPost(postUuid: string, data: CreateMediaPayload): Promise<AudioPost> {
     const formData = new FormData();
     formData.append('label', data.label);
-    formData.append('audio', data.file); // Fixed: use 'audio' not 'file'
+    formData.append('audio', data.file);
 
     const response = await axiosAuthInstance.post(`${BASE_URL}/${postUuid}/audios/`, formData, {
       headers: {
@@ -108,17 +111,17 @@ export const blogApi = {
   },
 
   async getAudioPost(uuid: string): Promise<AudioPost> {
-    const response = await axiosPublicInstance.get(`${BASE_URL}/audios/${uuid}/`);
+    const response = await axiosPublicInstance.get(`${API_URL}/api/blog/audios/${uuid}/`);
     return response.data;
   },
 
   async updateAudioPost(uuid: string, data: Partial<AudioPost>): Promise<AudioPost> {
-    const response = await axiosAuthInstance.put(`${BASE_URL}/audios/${uuid}/`, data);
+    const response = await axiosAuthInstance.put(`${API_URL}/api/blog/audios/${uuid}/`, data);
     return response.data;
   },
 
   async deleteAudioPost(uuid: string): Promise<void> {
-    await axiosAuthInstance.delete(`${BASE_URL}/audios/${uuid}/`);
+    await axiosAuthInstance.delete(`${API_URL}/api/blog/audios/${uuid}/`);
   },
 
   // FilePost Endpoints
@@ -130,7 +133,7 @@ export const blogApi = {
   async createFilePost(postUuid: string, data: CreateMediaPayload): Promise<FilePost> {
     const formData = new FormData();
     formData.append('label', data.label);
-    formData.append('file', data.file); // Correct: FilePost uses 'file'
+    formData.append('file', data.file);
 
     const response = await axiosAuthInstance.post(`${BASE_URL}/${postUuid}/files/`, formData, {
       headers: {
@@ -142,17 +145,17 @@ export const blogApi = {
   },
 
   async getFilePost(uuid: string): Promise<FilePost> {
-    const response = await axiosPublicInstance.get(`${BASE_URL}/files/${uuid}/`);
+    const response = await axiosPublicInstance.get(`${API_URL}/api/blog/files/${uuid}/`);
     return response.data;
   },
 
   async updateFilePost(uuid: string, data: Partial<FilePost>): Promise<FilePost> {
-    const response = await axiosAuthInstance.put(`${BASE_URL}/files/${uuid}/`, data);
+    const response = await axiosAuthInstance.put(`${API_URL}/api/blog/files/${uuid}/`, data);
     return response.data;
   },
 
   async deleteFilePost(uuid: string): Promise<void> {
-    await axiosAuthInstance.delete(`${BASE_URL}/files/${uuid}/`);
+    await axiosAuthInstance.delete(`${API_URL}/api/blog/files/${uuid}/`);
   },
 
   // ImagePost Endpoints
@@ -164,7 +167,7 @@ export const blogApi = {
   async createImagePost(postUuid: string, data: CreateMediaPayload): Promise<ImagePost> {
     const formData = new FormData();
     formData.append('label', data.label);
-    formData.append('image', data.file); // Correct: ImagePost uses 'image'
+    formData.append('image', data.file);
 
     const response = await axiosAuthInstance.post(`${BASE_URL}/${postUuid}/images/`, formData, {
       headers: {
@@ -176,16 +179,16 @@ export const blogApi = {
   },
 
   async getImagePost(uuid: string): Promise<ImagePost> {
-    const response = await axiosPublicInstance.get(`${BASE_URL}/images/${uuid}/`);
+    const response = await axiosPublicInstance.get(`${API_URL}/api/blog/images/${uuid}/`);
     return response.data;
   },
 
   async updateImagePost(uuid: string, data: Partial<ImagePost>): Promise<ImagePost> {
-    const response = await axiosAuthInstance.put(`${BASE_URL}/images/${uuid}/`, data);
+    const response = await axiosAuthInstance.put(`${API_URL}/api/blog/images/${uuid}/`, data);
     return response.data;
   },
 
   async deleteImagePost(uuid: string): Promise<void> {
-    await axiosAuthInstance.delete(`${BASE_URL}/images/${uuid}/`);
+    await axiosAuthInstance.delete(`${API_URL}/api/blog/images/${uuid}/`);
   },
 };
