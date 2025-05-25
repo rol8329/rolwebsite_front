@@ -333,14 +333,5 @@ const styles: Record<string, CSSProperties> = {
   },
 };
 
-// Add keyframes for spinner animation (you might want to add this to your global CSS)
-const styleSheet = document.createElement('style');
-styleSheet.textContent = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`;
-document.head.appendChild(styleSheet);
 
 export default LoginForm;

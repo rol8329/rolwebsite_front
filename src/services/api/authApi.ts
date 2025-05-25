@@ -27,6 +27,7 @@ export const authApi = {
    * User Login
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
+    console.log("Credentials:", credentials);
     const response = await axiosPublicInstance.post(`${BASE_URL}/auth/login/`, credentials);
     return response.data;
   },

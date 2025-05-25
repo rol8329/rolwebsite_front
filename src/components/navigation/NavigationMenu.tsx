@@ -13,6 +13,7 @@ import {
   Home,
   BookOpen,
   TrendingUp,
+  GitBranch,
   ChevronDown,
   X
 } from 'lucide-react';
@@ -72,6 +73,7 @@ const NavigationMenu: React.FC<NavigationMenuProps> = ({
   const navigationItems = [
     { icon: Home, label: 'Dashboard', href: '/dashboard', key: 'dashboard' },
     { icon: BookOpen, label: 'Blog', href: '/blog', key: 'blog' },
+    { icon: GitBranch, label: 'Flow Charts', href: '/flow', key: 'flow' },
     { icon: TrendingUp, label: 'Analytics', href: '/analytics', key: 'analytics' },
   ];
 
