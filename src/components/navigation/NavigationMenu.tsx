@@ -14,7 +14,9 @@ import {
   BookOpen,
   TrendingUp,
   ChevronDown,
-  X
+  X,
+  Presentation, // New icon for presentations
+  //Monitor // Alternative icon
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -72,6 +74,7 @@ const NavigationMenu: React.FC<NavigationMenuProps> = ({
   const navigationItems = [
     { icon: Home, label: 'Dashboard', href: '/dashboard', key: 'dashboard' },
     { icon: BookOpen, label: 'Blog', href: '/blog', key: 'blog' },
+    { icon: Presentation, label: 'Presentations', href: '/spectacle', key: 'spectacle' }, // New presentations item
     { icon: TrendingUp, label: 'Analytics', href: '/analytics', key: 'analytics' },
   ];
 
